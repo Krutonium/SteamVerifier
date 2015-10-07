@@ -34,23 +34,25 @@ Public Class Form1
         Me.Icon = My.Resources.Steam
         PictureBox1.Image = My.Resources.NotRunning
         'HKEY_CURRENT_USER\\Software\\Valve\\Half-Life\\InstallPath
-        Dim UserPath As String = ""
+        Dim SteamPath As String = ""
         Try
             Dim Reg As RegistryKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64)
             Reg = Reg.OpenSubKey("SOFTWARE\Valve\Steam")
             For Each v In Reg.GetValueNames
                 If v = "SteamPath" Then
-                    UserPath = Reg.GetValue(v)      'Yes, I had to do it this way, because for some reason just asking for the value of SteamPath gave null.
+                    SteamPath = Reg.GetValue(v)      'Yes, I had to do it this way, because for some reason just asking for the value of SteamPath gave null.
                 End If
             Next
         Catch ex As Exception
 
         End Try
-        If UserPath = "" Then
+        If SteamPath = "" Then
             Call ChooseNewDir()
-            UserPath = My.Settings.GameDirOther
+            SteamPath = My.Settings.GameDirOther
         End If
+
         Dim Dirs As New List(Of String)
+        Dirs.Add(SteamPath & "\steamapps")
         Try
             Dim vdf As New List(Of String)
             vdf = File.ReadAllLines(UserPath & "\steamapps\libraryfolders.vdf").ToList
@@ -84,7 +86,7 @@ Public Class Form1
     Private Sub ChooseNewDir()
         FolderBrowserDialog.ShowNewFolderButton = False
         FolderBrowserDialog.ShowDialog()
-        MsgBox(FolderBrowserDialog.SelectedPath)
+        'MsgBox(FolderBrowserDialog.SelectedPath)
         My.Settings.GameDirOther = FolderBrowserDialog.SelectedPath
         My.Settings.Save()
         UserPath = My.Settings.GameDirOther
