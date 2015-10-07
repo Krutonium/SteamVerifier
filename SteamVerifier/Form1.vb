@@ -63,7 +63,7 @@ Public Class Form1
                     For Each l In split
                         If l.Contains(":\\") Then
                             l = l.Replace("\\", "\")
-                            Dirs.Add(l)
+                            Dirs.Add(l & "\steamapps")
                         End If
                     Next
                 End If
