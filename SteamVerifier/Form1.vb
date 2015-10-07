@@ -2,6 +2,7 @@
 Imports System.Net
 Imports System.Runtime.InteropServices
 Imports System.Threading
+Imports Microsoft.Win32
 Public Class Form1
     Private Declare Function SetForegroundWindow Lib "user32" _
     (ByVal hWnd As IntPtr) As Boolean
@@ -32,28 +33,52 @@ Public Class Form1
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Me.Icon = My.Resources.Steam
         PictureBox1.Image = My.Resources.NotRunning
-        If Directory.Exists(My.Settings.GameDir64) = True Then
-            UserPath = My.Settings.GameDir64
-        Else
-            If Directory.Exists(My.Settings.GameDir32) = False Then
-                UserPath = My.Settings.GameDir32
-            Else
-                If Directory.Exists(My.Settings.GameDirOther) = False Then
-                    UserPath = My.Settings.GameDirOther
-                Else
-                    Call ChooseNewDir()
+        'HKEY_CURRENT_USER\\Software\\Valve\\Half-Life\\InstallPath
+        Dim UserPath As String = ""
+        Try
+            Dim Reg As RegistryKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64)
+            Reg = Reg.OpenSubKey("SOFTWARE\Valve\Steam")
+            For Each v In Reg.GetValueNames
+                If v = "SteamPath" Then
+                    UserPath = Reg.GetValue(v)      'Yes, I had to do it this way, because for some reason just asking for the value of SteamPath gave null.
                 End If
-            End If
+            Next
+        Catch ex As Exception
+
+        End Try
+        If UserPath = "" Then
+            Call ChooseNewDir()
+            UserPath = My.Settings.GameDirOther
         End If
-        For Each f In Directory.GetFiles(UserPath)
-            If f.EndsWith(".acf") Then
-                'GameIDList.Add(Path.GetFileNameWithoutExtension(f))
-                Dim GTemp As String = Path.GetFileNameWithoutExtension(f)
-                GTemp = GTemp.Replace("appmanifest_", "")
-                If My.Settings.BlackList.Contains(GTemp) = False Then
-                    GameIDList.Add(GTemp)
+        Dim Dirs As New List(Of String)
+        Try
+            Dim vdf As New List(Of String)
+            vdf = File.ReadAllLines(UserPath & "\steamapps\libraryfolders.vdf").ToList
+            For Each line In vdf
+                line = line.Trim
+                If line.Contains(":\\") Then
+                    Dim split = line.Split("""")
+                    For Each l In split
+                        If l.Contains(":\\") Then
+                            l = l.Replace("\\", "\")
+                            Dirs.Add(l)
+                        End If
+                    Next
                 End If
-            End If
+            Next
+        Catch ex As Exception
+        End Try
+        For Each UserPath In Dirs
+            For Each f In Directory.GetFiles(UserPath)
+                If f.EndsWith(".acf") Then
+                    'GameIDList.Add(Path.GetFileNameWithoutExtension(f))
+                    Dim GTemp As String = Path.GetFileNameWithoutExtension(f)
+                    GTemp = GTemp.Replace("appmanifest_", "")
+                    If My.Settings.BlackList.Contains(GTemp) = False Then
+                        GameIDList.Add(GTemp)
+                    End If
+                End If
+            Next
         Next
     End Sub
     Private Sub ChooseNewDir()
@@ -181,6 +206,7 @@ Public Class Form1
         End If
         If IsValidating = False Then
             Button1.Enabled = True
+            checkIfValidDone.Enabled = False
             MsgBox("Verification of your games is complete!", MsgBoxStyle.OkOnly, "Verified!")
         End If
     End Sub
